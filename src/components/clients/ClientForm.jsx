@@ -15,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Client, ServiceCompany, ServiceProvider, ClientServiceProvider } from '@/api/entities';
+import { Client, ServiceCompany, ServiceProvider, ClientServiceProvider, SystemConfig } from '@/api/entities';
 import ClientAccountsManager from '@/components/clients/ClientAccountsManager';
 import ProcessTreeManager from '@/components/clients/ProcessTreeManager';
 import { loadAutomationRules, getAutoLinkedServices } from '@/config/automationRules';
@@ -145,6 +145,13 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
     shareholders: [],
     quick_links: [],  // Array of { label, url } — hyperlinks per client
     internal_notes: [],  // Array of { date, text } — internal CRM notes  // Array of { name, id_number, birth_date, license_number, phone, email, role, custom_fields: {} }
+    // Income/expense bookkeeping software the user has DIRECT ACCESS to
+    // for this client. When non-empty, the recurring-task injection will
+    // pre-mark the "קבלת חומרים" step on the קליטת הכנסות / קליטת
+    // הוצאות tasks as done — because the materials are already on hand
+    // (no waiting for the client to send anything).
+    // Each entry: { name: 'חשבשבת'|'פריוריטי'|..., notes: '' }
+    income_software_access: [],
     display_fields: {  // Which fields to show on task lists/dashboards
       show_entity_number: true,
       show_deductions_file: true,
@@ -165,12 +172,79 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
   const [clientLinks, setClientLinks] = useState([]);
   const [isLoadingLinks, setIsLoadingLinks] = useState(false);
 
+  // Software catalog (income/expense bookkeeping software the user can
+  // have direct access to). Loaded from SystemConfig.system_parameters
+  // .income_softwares so it stays in sync with the master list under
+  // Settings → "פרמטרים עסקיים" → "תוכנות הכנסות/הוצאות". The hardcoded
+  // fallback covers a fresh install or a config-load failure so the
+  // tab is always usable.
+  const SOFTWARE_FALLBACK = ['חשבשבת', 'פריוריטי', 'חשבונית ירוקה', 'Sumit', 'iCount', 'חשבונית קטנה', 'רימסה', 'ויסאל', 'אחר'];
+  const [softwareCatalog, setSoftwareCatalog] = useState(SOFTWARE_FALLBACK);
+  const [customSoftwareInput, setCustomSoftwareInput] = useState('');
+
   const [selectedCompanyToLink, setSelectedCompanyToLink] = useState(null);
   const [selectedProvidersToLink, setSelectedProvidersToLink] = useState([]);
   const [automationRules, setAutomationRules] = useState([]);
   const [allClientsForLinking, setAllClientsForLinking] = useState([]);
 
   const isNewClient = !client?.id;
+
+  // Pull the income-software catalog from SystemConfig so this tab stays
+  // in lock-step with the master list under Settings → "פרמטרים עסקיים".
+  // If no record exists yet, the hardcoded fallback keeps the UI usable
+  // and Settings → first save will write it down for everyone.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const configs = await SystemConfig.list(null, 10);
+        const config = (configs || []).find(c => c.config_key === 'system_parameters');
+        const list = config?.data?.income_softwares;
+        if (!cancelled && Array.isArray(list) && list.length > 0) {
+          setSoftwareCatalog(list);
+        }
+      } catch (err) {
+        console.warn('[ClientForm] could not load income_softwares catalog:', err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Helpers for the תוכנות tab — toggle / add custom.
+  const toggleSoftware = (name) => {
+    setFormData(prev => {
+      const current = Array.isArray(prev.income_software_access) ? prev.income_software_access : [];
+      const has = current.some(x => (typeof x === 'string' ? x : x?.name) === name);
+      const next = has
+        ? current.filter(x => (typeof x === 'string' ? x : x?.name) !== name)
+        : [...current, { name, notes: '' }];
+      return { ...prev, income_software_access: next };
+    });
+  };
+  const isSoftwareSelected = (name) => {
+    const current = Array.isArray(formData.income_software_access) ? formData.income_software_access : [];
+    return current.some(x => (typeof x === 'string' ? x : x?.name) === name);
+  };
+  const addCustomSoftware = async () => {
+    const name = (customSoftwareInput || '').trim();
+    if (!name) return;
+    if (!softwareCatalog.includes(name)) {
+      // Persist new option to the master catalog so future selections see it.
+      const updated = [...softwareCatalog, name];
+      setSoftwareCatalog(updated);
+      try {
+        const configs = await SystemConfig.list(null, 10);
+        const existing = (configs || []).find(c => c.config_key === 'system_parameters');
+        const newData = { ...(existing?.data || {}), income_softwares: updated };
+        if (existing) await SystemConfig.update(existing.id, { data: newData });
+        else await SystemConfig.create({ config_key: 'system_parameters', data: newData });
+      } catch (err) {
+        console.warn('[ClientForm] could not persist new software to catalog:', err);
+      }
+    }
+    if (!isSoftwareSelected(name)) toggleSoftware(name);
+    setCustomSoftwareInput('');
+  };
 
   useEffect(() => {
     if (client) {
@@ -713,6 +787,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
               <TabsTrigger value="accounts" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500 data-[state=active]:to-blue-500 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 data-[state=inactive]:bg-white data-[state=inactive]:text-gray-600 data-[state=inactive]:border data-[state=inactive]:border-gray-200 data-[state=inactive]:hover:border-cyan-300 data-[state=inactive]:hover:text-cyan-600 rounded-full px-5 py-2.5 text-sm font-bold whitespace-nowrap transition-all duration-300">🏦 בנק</TabsTrigger>
               <TabsTrigger value="integration" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-500 data-[state=active]:to-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 data-[state=inactive]:bg-white data-[state=inactive]:text-gray-600 data-[state=inactive]:border data-[state=inactive]:border-gray-200 data-[state=inactive]:hover:border-indigo-300 data-[state=inactive]:hover:text-indigo-600 rounded-full px-5 py-2.5 text-sm font-bold whitespace-nowrap transition-all duration-300">🔗 חיבורים</TabsTrigger>
               <TabsTrigger value="shareholders" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-slate-600 data-[state=active]:to-slate-700 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 data-[state=inactive]:bg-white data-[state=inactive]:text-gray-600 data-[state=inactive]:border data-[state=inactive]:border-gray-200 data-[state=inactive]:hover:border-slate-400 data-[state=inactive]:hover:text-slate-600 rounded-full px-5 py-2.5 text-sm font-bold whitespace-nowrap transition-all duration-300">👤 בעלי מניות</TabsTrigger>
+              <TabsTrigger value="software" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500 data-[state=active]:to-cyan-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 data-[state=inactive]:bg-white data-[state=inactive]:text-gray-600 data-[state=inactive]:border data-[state=inactive]:border-gray-200 data-[state=inactive]:hover:border-cyan-300 data-[state=inactive]:hover:text-cyan-600 rounded-full px-5 py-2.5 text-sm font-bold whitespace-nowrap transition-all duration-300">🖥️ תוכנות</TabsTrigger>
               <TabsTrigger value="display_settings" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-slate-600 data-[state=active]:to-slate-700 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 data-[state=inactive]:bg-white data-[state=inactive]:text-gray-600 data-[state=inactive]:border data-[state=inactive]:border-gray-200 data-[state=inactive]:hover:border-slate-400 data-[state=inactive]:hover:text-slate-600 rounded-full px-5 py-2.5 text-sm font-bold whitespace-nowrap transition-all duration-300">👁️ הצגה</TabsTrigger>
             </TabsList>
 
@@ -1415,6 +1490,102 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                   </div>
                 </div>
               ))}
+            </TabsContent>
+
+            {/* ── 🖥️ תוכנות הכנסות/הוצאות ──
+                Catalog comes from SystemConfig.system_parameters.income_softwares,
+                editable in Settings → "פרמטרים עסקיים". When the array on
+                this client is non-empty, the recurring-task injection auto-
+                marks the "קבלת חומרים" step on קליטת הכנסות / קליטת הוצאות
+                as done. */}
+            <TabsContent value="software" className="space-y-4 rounded-2xl border-2 border-cyan-200 bg-cyan-50/30 p-5">
+              <div className="flex items-start justify-between gap-3 flex-wrap">
+                <div>
+                  <h3 className="font-bold text-gray-800 text-base mb-1">גישה ישירה לתוכנות הכנסות/הוצאות</h3>
+                  <p className="text-xs text-gray-500 max-w-xl">
+                    סמני את התוכנות שיש לך גישה ישירה אליהן עבור הלקוח הזה. בהזרקה הבאה של
+                    משימות "קליטת הכנסות / הוצאות", הצעד "קבלת חומרים" יסומן אוטומטית
+                    כבוצע (כי החומרים אצלך ולא מחכים שהלקוח ישלח).
+                  </p>
+                </div>
+                <Link
+                  to={createPageUrl('Settings')}
+                  className="text-[12px] text-cyan-700 hover:text-cyan-900 underline whitespace-nowrap"
+                  title="עריכת הרשימה הראשית בהגדרות מערכת"
+                >
+                  ✎ ניהול הרשימה הראשית בהגדרות
+                </Link>
+              </div>
+
+              <div>
+                <Label className="text-sm font-semibold mb-2 block">תוכנות זמינות:</Label>
+                <div className="flex flex-wrap gap-2">
+                  {softwareCatalog.map(name => {
+                    const selected = isSoftwareSelected(name);
+                    return (
+                      <button
+                        key={name}
+                        type="button"
+                        onClick={() => toggleSoftware(name)}
+                        className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-all ${
+                          selected
+                            ? 'bg-cyan-500 text-white border-cyan-600 shadow-sm'
+                            : 'bg-white text-gray-700 border-gray-300 hover:border-cyan-400 hover:text-cyan-700'
+                        }`}
+                      >
+                        {selected ? '✓ ' : ''}{name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <Label className="text-sm font-semibold mb-2 block">הוספת תוכנה חדשה (תישמר ברשימה הראשית):</Label>
+                <div className="flex gap-2 max-w-md">
+                  <Input
+                    value={customSoftwareInput}
+                    onChange={(e) => setCustomSoftwareInput(e.target.value)}
+                    placeholder="שם תוכנה חדשה..."
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCustomSoftware(); } }}
+                    className="text-sm"
+                  />
+                  <Button type="button" variant="outline" onClick={addCustomSoftware} disabled={!customSoftwareInput.trim()}>
+                    <Plus className="w-4 h-4 ms-1" />
+                    הוסף
+                  </Button>
+                </div>
+                <p className="text-[12px] text-gray-400 mt-1.5">
+                  התוכנה החדשה תיווסף גם לרשימה הראשית (זמינה עבור כל הלקוחות).
+                </p>
+              </div>
+
+              {Array.isArray(formData.income_software_access) && formData.income_software_access.length > 0 && (
+                <div className="border-t pt-4">
+                  <Label className="text-sm font-semibold mb-2 block">סיכום ({formData.income_software_access.length} תוכנות):</Label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {formData.income_software_access.map((entry, idx) => {
+                      const name = typeof entry === 'string' ? entry : (entry?.name || '');
+                      return (
+                        <span key={idx} className="inline-flex items-center gap-1 px-2.5 py-1 bg-cyan-100 text-cyan-800 rounded-full text-xs border border-cyan-200">
+                          {name}
+                          <button
+                            type="button"
+                            onClick={() => toggleSoftware(name)}
+                            className="text-cyan-500 hover:text-cyan-900"
+                            title="הסר"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-3 p-2.5 rounded-lg bg-cyan-100/50 border border-cyan-200 text-[12px] text-cyan-800">
+                    ✓ בהזרקה הבאה של "קליטת הכנסות / הוצאות" עבור לקוח זה, הצעד "קבלת חומרים" יסומן אוטומטית.
+                  </div>
+                </div>
+              )}
             </TabsContent>
 
             {/* ── הגדרות הצגה ── */}

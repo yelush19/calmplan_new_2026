@@ -187,6 +187,25 @@ export default function ClientListItem({ client, isSelected, onToggleSelect, onE
                 ))}
               </div>
             )}
+
+            {/* Row 4: Direct income/expense software access — chips. Lets the
+                user spot at a glance which clients she has direct access to,
+                without opening each card. Only shown when there is at least
+                one software linked. */}
+            {Array.isArray(client.income_software_access) && client.income_software_access.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 px-4 py-1.5 border-t border-gray-50 bg-cyan-50/30">
+                <span className="text-[11px] font-semibold text-cyan-700">🖥️ גישה ישירה:</span>
+                {client.income_software_access.map((entry, idx) => {
+                  const name = typeof entry === 'string' ? entry : (entry?.name || '');
+                  if (!name) return null;
+                  return (
+                    <span key={idx} className="text-[11px] px-1.5 py-0.5 rounded-full bg-cyan-100 text-cyan-800 border border-cyan-200">
+                      {name}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
         </div>
     );
 }

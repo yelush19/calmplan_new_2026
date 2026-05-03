@@ -365,6 +365,15 @@ const LITAY_PARAM_GROUPS = [
     placeholder: 'הוסף שלב...',
     description: 'שלבי תהליך הכנת מאזן שנתי',
   },
+  {
+    key: 'income_softwares',
+    label: 'תוכנות הכנסות/הוצאות',
+    icon: FileText,
+    color: 'border-cyan-200 bg-cyan-50',
+    iconColor: 'text-cyan-600',
+    placeholder: 'הוסף תוכנה...',
+    description: 'תוכנות שניתן לבחור בכרטיס לקוח תחת "גישה לתוכנות". משמש להזרקה אוטומטית של "קבלת חומרים".',
+  },
 ];
 
 function LitaySettings() {
@@ -390,6 +399,7 @@ function LitaySettings() {
           report_types: ['מע"מ תקופתי', '874 מפורט', 'מקדמות מס הכנסה', 'ביטוח לאומי — דיווח', 'ניכויים — דיווח', 'דוח שנתי'],
           reporting_frequencies: ['חודשי', 'דו-חודשי', 'רבעוני', 'חצי שנתי', 'שנתי', 'לא רלוונטי'],
           balance_processes: ['פעולות סגירה', 'עריכה לביקורת', 'שליחה לרו"ח', 'שאלות רו"ח - סבב 1', 'שאלות רו"ח - סבב 2', 'חתימה'],
+          income_softwares: ['חשבשבת', 'פריוריטי', 'חשבונית ירוקה', 'Sumit', 'iCount', 'חשבונית קטנה', 'רימסה', 'ויסאל', 'אחר'],
         };
         const newConfig = await SystemConfig.create({ config_key: 'system_parameters', data: defaults });
         setParams(defaults);
