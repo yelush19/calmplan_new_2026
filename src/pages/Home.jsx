@@ -610,18 +610,20 @@ export default function HomePage() {
   const progress = todayTotal > 0 ? (data.completedToday / (todayTotal + data.completedToday)) * 100 : 0;
 
   // ── Default: Calm Home View ──
+  // ADHD-accessibility: tightened paddings & spacings so the morning view
+  // fits in one viewport (no scrolling for the primary fold).
   return (
     <div className="w-full h-full flex-1 flex flex-col" style={{ backgroundColor: '#F7F7F7' }}>
-      <div className="space-y-4 p-4">
+      <div className="space-y-2 p-2 md:p-3">
 
         {/* ═══ 1. Calming Greeting ═══ */}
-        <div className="px-4 py-4 rounded-2xl" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB' }}>
-          <div className="flex items-start justify-between gap-4">
+        <div className="px-3 py-2.5 rounded-2xl" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB' }}>
+          <div className="flex items-start justify-between gap-3">
             <div className="flex-1">
-              <h2 className="text-lg font-bold text-slate-700">
+              <h2 className="text-base font-bold text-slate-700">
                 {getGreeting()}{userName ? `, ${userName}` : ''}
               </h2>
-              <p className="text-sm text-slate-500 mt-1">{getDailyMessage()}</p>
+              <p className="text-xs text-slate-500 mt-0.5">{getDailyMessage()}</p>
               {data.completedYesterday > 0 && (
                 <p className="text-xs text-slate-400 mt-1">
                   <CheckCircle className="w-3 h-3 inline ml-1" style={{ color: '#5A9EB5' }} />
@@ -675,22 +677,22 @@ export default function HomePage() {
               "מפת חשיבה" link card AND the bottom "הצג מפה מלאה" button.
               "חדש" moves out of the right-cluster so both actions sit
               together in one obvious row. */}
-          <div className="flex items-center gap-2 mt-2">
+          <div className="flex items-center gap-2 mt-1.5">
             <Button
               size="sm"
               onClick={() => setShowQuickAdd(true)}
-              className="bg-[#5A9EB5] hover:bg-[#4A8EA5] text-white gap-1 h-7 text-xs px-3"
+              className="bg-[#5A9EB5] hover:bg-[#4A8EA5] text-white gap-1 h-6 text-[11px] px-2.5"
             >
-              <Plus className="w-3.5 h-3.5" />
+              <Plus className="w-3 h-3" />
               חדש
             </Button>
             <Link to={createPageUrl('MindMap')}>
               <Button
                 size="sm"
                 variant="outline"
-                className="gap-1 h-7 text-xs px-3 border-slate-300 text-slate-600 hover:bg-slate-50"
+                className="gap-1 h-6 text-[11px] px-2.5 border-slate-300 text-slate-600 hover:bg-slate-50"
               >
-                <Map className="w-3.5 h-3.5" />
+                <Map className="w-3 h-3" />
                 מפת חשיבה
               </Button>
             </Link>
@@ -700,11 +702,11 @@ export default function HomePage() {
               Big completed-today number on the right (RTL), thick coloured bar
               in the middle, total-tasks descriptor on the left. Bar colour
               shifts amber → blue → green as progress climbs. */}
-          <div className="flex items-center gap-3 mt-3 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200">
-            <span className="text-base font-black text-slate-700 tabular-nums min-w-[3ch]">
+          <div className="flex items-center gap-2.5 mt-2 px-2.5 py-1.5 rounded-xl bg-slate-50 border border-slate-200">
+            <span className="text-sm font-black text-slate-700 tabular-nums min-w-[3ch]">
               {data.completedToday}
             </span>
-            <div className="flex-1 relative bg-slate-200 rounded-full h-3 overflow-hidden">
+            <div className="flex-1 relative bg-slate-200 rounded-full h-2.5 overflow-hidden">
               <div
                 className="h-full rounded-full transition-all duration-700"
                 style={{
@@ -713,7 +715,7 @@ export default function HomePage() {
                 }}
               />
             </div>
-            <span className="text-xs text-slate-500 whitespace-nowrap">
+            <span className="text-[11px] text-slate-500 whitespace-nowrap">
               מתוך {todayTotal + data.completedToday} משימות
             </span>
           </div>
@@ -721,7 +723,7 @@ export default function HomePage() {
           {/* Energy level buttons — Stage 5.7.3: bad-day toggle now lives
               inline at the end of this row instead of as a standalone card.
               flex-wrap added so the row can break on narrow screens. */}
-          <div className="flex items-center gap-2 mt-3 flex-wrap">
+          <div className="flex items-center gap-2 mt-2 flex-wrap">
             <span className="text-[13px] text-slate-400">רמת אנרגיה:</span>
             <div className="flex gap-1.5 flex-wrap">
               {[
@@ -802,7 +804,7 @@ export default function HomePage() {
             Stage 5.7.3: BadDayMode standalone card removed — now lives
             inline in the greeting. Mind-map link card also removed —
             replaced by the button next to 'חדש'. */}
-        <div dir="rtl" className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div dir="rtl" className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
 
           {/* ─── RIGHT column (visually first in RTL) ─── */}
           <div className="space-y-3">
@@ -822,7 +824,7 @@ export default function HomePage() {
                       type="button"
                       dir="rtl"
                       onClick={() => setOpenSections(prev => ({ ...prev, [tab.key]: !prev[tab.key] }))}
-                      className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 active:bg-slate-100 transition-colors cursor-pointer"
+                      className="w-full flex items-center justify-between px-3 py-2 hover:bg-slate-50 active:bg-slate-100 transition-colors cursor-pointer"
                     >
                       <div className="flex items-center gap-2">
                         <Icon className={`w-4 h-4 ${tab.color}`} />
@@ -852,7 +854,7 @@ export default function HomePage() {
                           transition={{ duration: 0.2, ease: 'easeInOut' }}
                           className="overflow-hidden"
                         >
-                          <div className="px-4 pb-3">
+                          <div className="px-3 pb-2">
                             {/* Stage 5.9: OverdueAlert lives inside the
                                 היום section — sky-toned, self-hides when
                                 data.overdue is empty, renders the overdue
@@ -960,7 +962,7 @@ export default function HomePage() {
                       type="button"
                       dir="rtl"
                       onClick={() => setOpenSections(prev => ({ ...prev, [tab.key]: !prev[tab.key] }))}
-                      className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 active:bg-slate-100 transition-colors cursor-pointer"
+                      className="w-full flex items-center justify-between px-3 py-2 hover:bg-slate-50 active:bg-slate-100 transition-colors cursor-pointer"
                     >
                       <div className="flex items-center gap-2">
                         <Icon className={`w-4 h-4 ${tab.color}`} />
@@ -985,7 +987,7 @@ export default function HomePage() {
                           transition={{ duration: 0.2, ease: 'easeInOut' }}
                           className="overflow-hidden"
                         >
-                          <div className="px-4 pb-3">
+                          <div className="px-3 pb-2">
                             {tab.key === 'events' ? (
                               items.length === 0 ? (
                                 <EmptyState icon={<Calendar className="w-10 h-10 text-purple-300" />} text="אין אירועים היום" />
@@ -1086,7 +1088,151 @@ function EmptyState({ icon, text }) {
   );
 }
 
+// Given a task, return its YYYY-MM "reporting month" — preferring the
+// explicit reporting_month field (used by accounting tasks) and falling
+// back to the due_date's calendar month. Returns null when neither is set.
+function getTaskMonth(task) {
+  if (task?.reporting_month) {
+    const m = String(task.reporting_month).match(/^(\d{4})-(\d{2})/);
+    if (m) return `${m[1]}-${m[2]}`;
+  }
+  if (task?.due_date) {
+    const d = String(task.due_date).slice(0, 7);
+    if (/^\d{4}-\d{2}$/.test(d)) return d;
+  }
+  return null;
+}
+
+const HEBREW_MONTHS = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+function formatMonthLabel(yyyymm) {
+  if (!yyyymm) return 'ללא חודש';
+  const [y, mm] = yyyymm.split('-');
+  const idx = parseInt(mm, 10) - 1;
+  if (idx < 0 || idx > 11) return yyyymm;
+  return `${HEBREW_MONTHS[idx]} ${y}`;
+}
+
+const CURRENT_MONTH_KEY = (() => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+})();
+
+// Split tasks into reporting-month buckets. Returns an array of
+// { month, label, tasks, isCurrent, isLeftover, isFuture } in display
+// order: current month → leftover (older months, oldest first to surface
+// "stuck" work) → future months → undated. When all tasks fall into one
+// bucket the caller can skip rendering month headers.
+function groupTasksByMonth(tasks) {
+  const buckets = new Map();
+  tasks.forEach(task => {
+    const key = getTaskMonth(task) || 'unknown';
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key).push(task);
+  });
+  const keys = [...buckets.keys()].sort((a, b) => {
+    if (a === b) return 0;
+    if (a === 'unknown') return 1;
+    if (b === 'unknown') return -1;
+    if (a === CURRENT_MONTH_KEY) return -1;
+    if (b === CURRENT_MONTH_KEY) return 1;
+    const aPast = a < CURRENT_MONTH_KEY;
+    const bPast = b < CURRENT_MONTH_KEY;
+    if (aPast && !bPast) return -1;  // leftover (past) before future
+    if (!aPast && bPast) return 1;
+    if (aPast && bPast) return a.localeCompare(b);  // oldest leftover first
+    return a.localeCompare(b);                       // earliest future first
+  });
+  return keys.map(month => ({
+    month,
+    label: month === 'unknown' ? 'ללא תאריך / חודש' : formatMonthLabel(month),
+    tasks: buckets.get(month),
+    isCurrent: month === CURRENT_MONTH_KEY,
+    isLeftover: month !== 'unknown' && month < CURRENT_MONTH_KEY,
+    isFuture: month !== 'unknown' && month > CURRENT_MONTH_KEY,
+  }));
+}
+
 function TaskList({ tasks, onStatusChange, onPaymentDateChange, onEdit, onNote, showDeadlineContext, showDate, showPaymentDate }) {
+  // ADHD-accessibility: when tasks span multiple reporting months
+  // (e.g. April imports landing on top of leftover March work), split
+  // them into month sections with a clear header so the user can tell
+  // "new this month" from "still owed from last month" at a glance.
+  const monthSections = useMemo(() => groupTasksByMonth(tasks), [tasks]);
+  const multiMonth = monthSections.length > 1;
+
+  if (multiMonth) {
+    return (
+      <div className="space-y-3">
+        {monthSections.map(section => (
+          <div key={section.month}>
+            <div
+              className="flex items-center gap-2 px-2 py-1 rounded-md mb-1"
+              style={{
+                backgroundColor: section.isCurrent ? '#ECFDF5' : section.isLeftover ? '#FEF3C7' : section.isFuture ? '#EFF6FF' : '#F1F5F9',
+                border: `1px solid ${section.isCurrent ? '#A7F3D0' : section.isLeftover ? '#FCD34D' : section.isFuture ? '#BFDBFE' : '#E2E8F0'}`,
+              }}
+            >
+              <span
+                className="text-[11px] font-bold"
+                style={{ color: section.isCurrent ? '#065F46' : section.isLeftover ? '#92400E' : section.isFuture ? '#1E40AF' : '#475569' }}
+              >
+                {section.label}
+              </span>
+              <span
+                className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                style={{
+                  backgroundColor: '#FFFFFF',
+                  color: section.isCurrent ? '#065F46' : section.isLeftover ? '#92400E' : section.isFuture ? '#1E40AF' : '#475569',
+                  border: '1px solid currentColor',
+                }}
+              >
+                {section.tasks.length}
+              </span>
+              {section.isLeftover && (
+                <span className="text-[10px] font-semibold text-amber-700">
+                  נשאר מהחודש הקודם
+                </span>
+              )}
+              {section.isCurrent && (
+                <span className="text-[10px] font-semibold text-emerald-700">
+                  החודש
+                </span>
+              )}
+            </div>
+            <SingleMonthTaskList
+              tasks={section.tasks}
+              onStatusChange={onStatusChange}
+              onPaymentDateChange={onPaymentDateChange}
+              onEdit={onEdit}
+              onNote={onNote}
+              showDeadlineContext={showDeadlineContext}
+              showDate={showDate}
+              showPaymentDate={showPaymentDate}
+            />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <SingleMonthTaskList
+      tasks={tasks}
+      onStatusChange={onStatusChange}
+      onPaymentDateChange={onPaymentDateChange}
+      onEdit={onEdit}
+      onNote={onNote}
+      showDeadlineContext={showDeadlineContext}
+      showDate={showDate}
+      showPaymentDate={showPaymentDate}
+    />
+  );
+}
+
+// The original TaskList rendering (small list inline, larger list grouped
+// by client). Extracted so the month-aware wrapper can render either one
+// or many sections without duplicating the per-month UI.
+function SingleMonthTaskList({ tasks, onStatusChange, onPaymentDateChange, onEdit, onNote, showDeadlineContext, showDate, showPaymentDate }) {
   const [collapsedClients, setCollapsedClients] = useState({});
   const [allExpanded, setAllExpanded] = useState(false);
 

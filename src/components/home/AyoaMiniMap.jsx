@@ -185,15 +185,18 @@ const STATUS_ORDER = [
 // positioned on a ring around a central hub, with a connecting line from
 // the hub to the circle's edge ("branch" metaphor). The most-urgent group
 // lands at the top (angle = -π/2) and subsequent groups walk clockwise.
-// Geometry is fixed (viewBox = 480×340) so the SVG scales cleanly on any
+// Geometry is fixed (viewBox) so the SVG scales cleanly on any
 // screen width without the circles colliding or the labels clipping.
+// ADHD-accessibility tightening: reduced ring radius + viewBox so the map
+// occupies roughly half the vertical real-estate it used to, leaving room
+// for the focus-tab grid below it without scrolling.
 const VIEW_WIDTH = 480;
-const VIEW_HEIGHT = 340;
+const VIEW_HEIGHT = 270;
 const CENTER_X = VIEW_WIDTH / 2;
 const CENTER_Y = VIEW_HEIGHT / 2;
-const RING_RADIUS = 118; // distance from centre to each group circle
-const HUB_RADIUS = 34;   // size of the central hub
-const LABEL_OFFSET = 10; // gap between circle edge and its label box
+const RING_RADIUS = 96;  // distance from centre to each group circle
+const HUB_RADIUS = 28;   // size of the central hub
+const LABEL_OFFSET = 8;  // gap between circle edge and its label box
 
 function computeRadialPosition(i, n) {
   // For a single group, park it directly above the hub so the layout
@@ -236,6 +239,11 @@ const STATUS_RING_ORDER = [
 ];
 
 function StatusRing({ cx, cy, r, statusBuckets, total }) {
+  // ADHD-accessibility: hovering a segment thickens it AND surfaces an
+  // inline label next to the ring, instead of relying solely on the native
+  // <title> tooltip (which is delayed and easy to miss).
+  const [hoveredStatus, setHoveredStatus] = useState(null);
+
   if (!statusBuckets || !total) return null;
   // Build an ordered list of present statuses with their fraction
   const present = STATUS_RING_ORDER
@@ -243,15 +251,17 @@ function StatusRing({ cx, cy, r, statusBuckets, total }) {
     .filter((b) => b.count > 0);
   if (present.length === 0) return null;
 
-  const RING_OFFSET = 6;        // distance from circle stroke to ring
+  const RING_OFFSET = 6;          // distance from circle stroke to ring
   const RING_RADIUS = r + RING_OFFSET;
-  const STROKE_WIDTH = 3.5;
+  const BASE_STROKE = 3.5;
+  const HOVER_STROKE = 8;         // thickened width on hover
   const GAP = present.length > 1 ? 0.06 : 0;  // small gap (radians) between segments
 
   // Single-status fast-path: a clean closed ring (two semicircles).
   if (present.length === 1) {
     const only = present[0];
     const label = STATUS_CONFIG[only.status]?.label || only.status;
+    const isHovered = hoveredStatus === only.status;
     return (
       <g>
         <circle
@@ -260,17 +270,29 @@ function StatusRing({ cx, cy, r, statusBuckets, total }) {
           r={RING_RADIUS}
           fill="none"
           stroke={STATUS_RING_COLORS[only.status] || '#CBD5E1'}
-          strokeWidth={STROKE_WIDTH}
-          strokeOpacity={0.85}
+          strokeWidth={isHovered ? HOVER_STROKE : BASE_STROKE}
+          strokeOpacity={isHovered ? 1 : 0.85}
+          style={{ transition: 'stroke-width 0.15s ease, stroke-opacity 0.15s ease', cursor: 'pointer' }}
+          onMouseEnter={() => setHoveredStatus(only.status)}
+          onMouseLeave={() => setHoveredStatus(null)}
         >
           <title>{`${label} — ${only.count} משימות`}</title>
         </circle>
+        {isHovered && (
+          <RingHoverLabel
+            cx={cx}
+            cy={cy + RING_RADIUS + 14}
+            text={`${label} · ${only.count}`}
+            color={STATUS_RING_COLORS[only.status] || '#CBD5E1'}
+          />
+        )}
       </g>
     );
   }
 
   let cursor = -Math.PI / 2;  // start at the top
   const segments = [];
+  let hoverInfo = null;       // { status, count, midAngle } for the inline label
   present.forEach(({ status, count }) => {
     const fraction = count / total;
     const sweep = Math.max(0, fraction * 2 * Math.PI - GAP);
@@ -283,23 +305,91 @@ function StatusRing({ cx, cy, r, statusBuckets, total }) {
     const y2 = cy + Math.sin(endA) * RING_RADIUS;
     const largeArc = sweep > Math.PI ? 1 : 0;
     const label = STATUS_CONFIG[status]?.label || status;
+    const isHovered = hoveredStatus === status;
+    if (isHovered) {
+      const midAngle = (startA + endA) / 2;
+      hoverInfo = { status, count, label, midAngle };
+    }
     segments.push(
       <path
         key={status}
         d={`M ${x1} ${y1} A ${RING_RADIUS} ${RING_RADIUS} 0 ${largeArc} 1 ${x2} ${y2}`}
         stroke={STATUS_RING_COLORS[status] || '#CBD5E1'}
-        strokeWidth={STROKE_WIDTH}
+        strokeWidth={isHovered ? HOVER_STROKE : BASE_STROKE}
         strokeLinecap="round"
         fill="none"
+        style={{ transition: 'stroke-width 0.15s ease', cursor: 'pointer' }}
+        onMouseEnter={() => setHoveredStatus(status)}
+        onMouseLeave={() => setHoveredStatus(null)}
       >
         <title>{`${label} — ${count} משימות`}</title>
       </path>
     );
     cursor = endA + GAP;
   });
+  // Inline floating label that follows the hovered segment — anchored
+  // outside the ring along the segment's midpoint angle.
+  const labelNode = hoverInfo
+    ? (() => {
+        const labelDist = RING_RADIUS + 16;
+        const lx = cx + Math.cos(hoverInfo.midAngle) * labelDist;
+        const ly = cy + Math.sin(hoverInfo.midAngle) * labelDist;
+        return (
+          <RingHoverLabel
+            cx={lx}
+            cy={ly}
+            text={`${hoverInfo.label} · ${hoverInfo.count}`}
+            color={STATUS_RING_COLORS[hoverInfo.status] || '#CBD5E1'}
+          />
+        );
+      })()
+    : null;
   // No pointerEvents:none here — segments need hover to surface their <title>
   // tooltips. Click bubbles up to the parent <g> so the drawer still opens.
-  return <g>{segments}</g>;
+  return <g>{segments}{labelNode}</g>;
+}
+
+// Floating label rendered next to a hovered status-ring segment. Uses
+// foreignObject so the Hebrew text wraps + reads RTL, with a soft pill
+// background matching the segment color.
+function RingHoverLabel({ cx, cy, text, color }) {
+  const W = 110;
+  const H = 22;
+  return (
+    <foreignObject
+      x={cx - W / 2}
+      y={cy - H / 2}
+      width={W}
+      height={H}
+      style={{ pointerEvents: 'none' }}
+    >
+      <div
+        xmlns="http://www.w3.org/1999/xhtml"
+        dir="rtl"
+        style={{
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          textAlign: 'center',
+          fontFamily: 'Heebo, sans-serif',
+          fontSize: '11px',
+          fontWeight: 600,
+          color: '#FFFFFF',
+          backgroundColor: color,
+          borderRadius: '9999px',
+          padding: '0 8px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+        }}
+      >
+        {text}
+      </div>
+    </foreignObject>
+  );
 }
 
 function AyoaCircle({ cx, cy, r, color, label, count, urgent, angle, onClick, statusBuckets, urgency, urgentCount }) {
@@ -703,24 +793,27 @@ export default function AyoaMiniMap({
       style={{
         backgroundColor: '#FFFFFF',
         border: '1px solid #EEF1F5',
-        padding: '12px 16px',
+        padding: '8px 12px',
         fontFamily: 'Heebo, sans-serif',
       }}
     >
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold" style={{ color: '#1A2332' }}>
+      <div className="flex items-center justify-between mb-1">
+        <h3 className="text-xs font-semibold" style={{ color: '#1A2332' }}>
           מפה לפי תחומי שירות
         </h3>
-        <span className="text-[12px]" style={{ color: '#9AA5B4' }}>
+        <span className="text-[11px]" style={{ color: '#9AA5B4' }}>
           {groups.length} תחומים · לחצי על עיגול
         </span>
       </div>
+      {/* ADHD-accessibility: cap the SVG width so it doesn't stretch and
+          eat the entire viewport on wide screens — keeps the map in scale
+          with the rest of the page and leaves room for the focus tabs. */}
       <svg
         width="100%"
         height="auto"
         viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
         preserveAspectRatio="xMidYMid meet"
-        style={{ display: 'block' }}
+        style={{ display: 'block', maxWidth: '480px', margin: '0 auto' }}
       >
         {/* Branches first — rendered under the circles so the circle
             strokes always sit on top of the line ends. */}
@@ -896,9 +989,11 @@ export default function AyoaMiniMap({
                 / TaxReportsDashboard / PayrollDashboard render in their tab
                 bodies. The drawer therefore behaves like a focused mini
                 dashboard for the selected service domain: per-step circles,
-                inline status select, notes, attachments. */}
+                inline status select, notes, attachments. The outer wrapper
+                mirrors the dashboards' rounded border-card so the drawer
+                renders the table identically. */}
             {drawerByService.map(({ service, clientRows }) => (
-              <div key={service.key} className="mb-4">
+              <div key={service.key} className="mb-4 border border-[#E0E0E0] rounded-xl overflow-hidden">
                 <GroupedServiceTable
                   service={service}
                   clientRows={clientRows}
