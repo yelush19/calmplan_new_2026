@@ -47,6 +47,7 @@ const REASON_COLORS = {
   wrong_month_current: 'bg-blue-100 text-blue-700 border-blue-200',
   missing_reporting_month: 'bg-purple-100 text-purple-700 border-purple-200',
   freq_na: 'bg-gray-100 text-gray-600 border-gray-200',
+  duplicate: 'bg-red-100 text-red-700 border-red-200',
 };
 
 const REASON_LABELS = {
@@ -56,6 +57,7 @@ const REASON_LABELS = {
   wrong_month_current: 'יעד בחודש דיווח (צריך חודש מועד)',
   missing_reporting_month: 'חסר תיוג חודש דיווח',
   freq_na: 'תדירות לא רלוונטית',
+  duplicate: 'כפילות (אותו לקוח+קטגוריה+חודש)',
 };
 
 export default function CleanupTool({ rules = [] }) {
@@ -101,6 +103,50 @@ export default function CleanupTool({ rules = [] }) {
       const byClient = {};
       let total = 0;
 
+      // ── DUPLICATE DETECTION (pre-pass) ──
+      // Group active tasks by (client_id|category|reporting_month). Any
+      // group with more than one entry is a duplicate cluster — typically
+      // caused by injection + payroll-cascade producing tasks with
+      // different titles for the same logical work.
+      // We RECOMMEND deleting the "less progressed" duplicates and keeping
+      // the most-progressed one. Heuristic: count done step circles +
+      // status weight. Highest score wins; the rest are flagged.
+      const activeForDupCheck = tasksArr.filter(t =>
+        t.status !== 'completed' && t.status !== 'not_relevant' && t.status !== 'production_completed' && t.category && (t.client_id || t.client_name) && t.reporting_month
+      );
+      const groupKey = (t) => `${t.client_id || t.client_name}|${t.category}|${t.reporting_month}`;
+      const groupedByKey = new Map();
+      for (const t of activeForDupCheck) {
+        const k = groupKey(t);
+        if (!groupedByKey.has(k)) groupedByKey.set(k, []);
+        groupedByKey.get(k).push(t);
+      }
+      const duplicateTaskIds = new Set();          // tasks marked for cleanup
+      const duplicateKeepTaskIds = new Set();      // tasks the user should KEEP
+      const duplicateGroupSize = new Map();        // taskId → group size for the badge
+      for (const group of groupedByKey.values()) {
+        if (group.length < 2) continue;
+        // Score: more done steps wins. Tie-break: status priority (later = more progressed).
+        const STATUS_WEIGHT = {
+          waiting_for_materials: 1, not_started: 2, sent_for_review: 3,
+          needs_corrections: 3, ready_to_broadcast: 4,
+          reported_pending_payment: 5, awaiting_recording: 6, production_completed: 7,
+        };
+        const scored = group.map(t => {
+          const steps = t.process_steps || {};
+          const doneCount = Object.values(steps).filter(s => s?.done).length;
+          const statusW = STATUS_WEIGHT[t.status] || 0;
+          return { task: t, score: doneCount * 10 + statusW };
+        });
+        scored.sort((a, b) => b.score - a.score);
+        const winner = scored[0].task;
+        duplicateKeepTaskIds.add(winner.id);
+        for (let i = 1; i < scored.length; i++) {
+          duplicateTaskIds.add(scored[i].task.id);
+          duplicateGroupSize.set(scored[i].task.id, group.length);
+        }
+      }
+
       for (const task of tasksArr) {
         // Skip already completed or not_relevant
         if (task.status === 'completed' || task.status === 'not_relevant') continue;
@@ -115,6 +161,15 @@ export default function CleanupTool({ rules = [] }) {
         const reportingInfo = client.reporting_info || {};
         let reason = null;
         let detail = '';
+
+        // Check 0 (highest priority): duplicate of another active task for the
+        // same (client, category, reporting_month). The pre-pass picked a
+        // "winner" (most-progressed task) and marked the rest for cleanup.
+        if (duplicateTaskIds.has(task.id)) {
+          reason = 'duplicate';
+          const groupSize = duplicateGroupSize.get(task.id) || 2;
+          detail = `נמצאו ${groupSize} משימות זהות (לקוח+קטגוריה+חודש דיווח). זוהי הפחות מתקדמת — מומלץ למחוק.`;
+        }
 
         // Check 1: Service for this category exists on client
         const requiredService = CATEGORY_TO_SERVICE[task.category];
@@ -241,11 +296,13 @@ export default function CleanupTool({ rules = [] }) {
 
     const wrongMonthCount = toClean.filter(i => i.reason === 'wrong_month_current').length;
     const missingTagCount = toClean.filter(i => i.reason === 'missing_reporting_month').length;
+    const duplicateCount = toClean.filter(i => i.reason === 'duplicate').length;
     const fixCount = wrongMonthCount + missingTagCount;
-    const notRelevantCount = toClean.length - fixCount;
+    const notRelevantCount = toClean.length - fixCount - duplicateCount;
     const parts = [];
     if (wrongMonthCount > 0) parts.push(`לתקן ${wrongMonthCount} תאריכי יעד`);
     if (missingTagCount > 0) parts.push(`לתייג ${missingTagCount} משימות עם חודש דיווח`);
+    if (duplicateCount > 0) parts.push(`למחוק ${duplicateCount} כפילויות (משימת המקור הכי-מתקדמת תישמר)`);
     if (notRelevantCount > 0) parts.push(`לסמן ${notRelevantCount} כ"לא רלוונטי"`);
     const confirmMsg = parts.join(' + ') + '?';
     if (!window.confirm(confirmMsg)) return;
@@ -277,6 +334,12 @@ export default function CleanupTool({ rules = [] }) {
           if (reportingMonth) {
             await Task.update(item.task.id, { reporting_month: reportingMonth });
           }
+        } else if (item.reason === 'duplicate') {
+          // Hard-delete the duplicate. The winner of the dedup pre-pass
+          // is preserved in the DB; only the redundant copies go away.
+          // Hard-delete (not 'not_relevant') because keeping a "deleted"
+          // duplicate around still pollutes the dashboards' counts.
+          await Task.delete(item.task.id);
         } else {
           await Task.update(item.task.id, { status: 'not_relevant' });
         }
