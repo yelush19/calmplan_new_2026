@@ -14,7 +14,11 @@ import {
   Briefcase, Home as HomeIcon, Calendar, CheckCircle, Clock,
   Target, AlertTriangle, ChevronDown, Sparkles,
   Plus, CreditCard,
-  Map, ArrowRight, X, FileBarChart, Calculator, GitBranch, Zap, TrendingUp,
+  // Aliased to MapIcon: importing a name `Map` shadows the built-in
+  // global Map constructor, and the production minifier collapsed
+  // `new Map()` calls onto the icon binding — crashing Home with
+  // "TypeError: f$ is not a constructor". Keep the alias forever.
+  Map as MapIcon, ArrowRight, X, FileBarChart, Calculator, GitBranch, Zap, TrendingUp,
 } from "lucide-react";
 import { getActiveTreeTasks } from '@/utils/taskTreeFilter';
 import TaskSidePanel from "@/components/tasks/TaskSidePanel";
@@ -101,7 +105,7 @@ import {
   areAllStepsDone,
 } from '@/config/processTemplates';
 import { evaluateAuthorityStatus } from '@/engines/taskCascadeEngine';
-import { getEffectiveStatus } from '@/utils/effectiveStatus';
+import { getEffectiveStatus, isClientResponsiblePayment } from '@/utils/effectiveStatus';
 
 // Error Boundary to catch React #310 and other render errors
 class MapErrorBoundary extends Component {
@@ -227,6 +231,19 @@ export default function HomePage() {
       in3Days.setDate(in3Days.getDate() + 3);
 
       const allTasks = rawTasks;
+      // ── Client-pays lookup map: when a client's authorities_payment_method
+      //    is 'client_pays', any task of theirs sitting in 'reported_pending_payment'
+      //    is effectively production_completed for us (payment is the client's
+      //    responsibility, not ours). Threading the client into getEffectiveStatus
+      //    surfaces this so the task drops off Home's active surfaces but is
+      //    still searchable in the database. ──
+      const clientByName = (() => {
+        const m = new Map();
+        (Array.isArray(clientsData) ? clientsData : []).forEach(c => { if (c?.name) m.set(c.name, c); });
+        return m;
+      })();
+      const clientFor = (task) => clientByName.get(task.client_name) || null;
+
       // Active tasks for HOME visualizations (circles, today/upcoming/overdue
       // sections) exclude both fully-completed tasks AND tasks that finished
       // their primary workflow (דיווח+תשלום) and are only awaiting bookkeeping
@@ -236,10 +253,10 @@ export default function HomePage() {
       // stale (e.g. submission+payment ticked but task.status still
       // "not_started") are still classified correctly.
       const activeTasks = allTasks.filter(t => {
-        const s = getEffectiveStatus(t);
+        const s = getEffectiveStatus(t, clientFor(t));
         return s !== 'production_completed' && s !== 'awaiting_recording';
       });
-      const awaitingRecording = allTasks.filter(t => getEffectiveStatus(t) === 'awaiting_recording');
+      const awaitingRecording = allTasks.filter(t => getEffectiveStatus(t, clientFor(t)) === 'awaiting_recording');
 
       const overdue = activeTasks.filter(task => {
         const d = task.due_date;
@@ -266,8 +283,12 @@ export default function HomePage() {
       });
 
       // Payment tab — exclude ghost tasks (same condition as TaskRow's isMissingData)
+      // and exclude tasks where the CLIENT is responsible for payment (the
+      // authority is paid directly by the client, not us). Those drop off
+      // the active list but stay in the DB for search.
       const waitingPayment = allTasks.filter(t => {
         if (!t.due_date || !t.client_size) return false;
+        if (isClientResponsiblePayment(t, clientFor(t))) return false;
         // Include tasks explicitly marked with legacy status
         if (t.status === 'reported_waiting_for_payment') return true;
         // Include completed tasks that have a payment_due_date (payment pending)
@@ -279,6 +300,11 @@ export default function HomePage() {
         }
         return false;
       });
+
+      // Tasks the CLIENT is paying directly. We track count for an awareness
+      // chip on the greeting card so the user can find them when needed,
+      // but they don't pollute the action lists.
+      const clientResponsiblePayment = allTasks.filter(t => isClientResponsiblePayment(t, clientFor(t)));
 
       const allEvents = Array.isArray(eventsData) ? eventsData : [];
       const todayEvents = allEvents.filter(event => {
@@ -297,6 +323,7 @@ export default function HomePage() {
         allTasks,
         activeTasks,
         awaitingRecording,
+        clientResponsiblePayment,
         overdue: sortedOverdue,
         today: sortedToday,
         mergedToday: sortByPriority([...overdue, ...todayTasks]),
@@ -669,6 +696,18 @@ export default function HomePage() {
                     </span>
                   </Link>
                 )}
+                {data.clientResponsiblePayment?.length > 0 && (
+                  <Link
+                    to={createPageUrl("Tasks") + "?status=reported_pending_payment"}
+                    className="flex items-center gap-1 hover:opacity-80"
+                    title="באחריות לקוח — הלקוח משלם ישירות לרשות. מחוץ למשימות שלך, אבל זמין לחיפוש"
+                  >
+                    <CreditCard className="w-3 h-3" style={{ color: '#9CA3AF' }} />
+                    <span className="text-xs font-bold" style={{ color: '#6B7280' }}>
+                      {data.clientResponsiblePayment.length}
+                    </span>
+                  </Link>
+                )}
               </div>
             </div>
           </div>
@@ -692,7 +731,7 @@ export default function HomePage() {
                 variant="outline"
                 className="gap-1 h-6 text-[11px] px-2.5 border-slate-300 text-slate-600 hover:bg-slate-50"
               >
-                <Map className="w-3 h-3" />
+                <MapIcon className="w-3 h-3" />
                 מפת חשיבה
               </Button>
             </Link>
@@ -1117,20 +1156,42 @@ const CURRENT_MONTH_KEY = (() => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 })();
 
-// Split tasks into reporting-month buckets. Returns an array of
-// { month, label, tasks, isCurrent, isLeftover, isFuture } in display
-// order: current month → leftover (older months, oldest first to surface
-// "stuck" work) → future months → undated. When all tasks fall into one
-// bucket the caller can skip rendering month headers.
+// True for "reporting" tasks — recurring authority/payroll/bookkeeping
+// work that's tied to a calendar month. These stay in the urgent foreground
+// even when their reporting_month has slipped into the past, because a
+// past-month report is overdue work, not "old news".
+function isReportingTask(task) {
+  return !!(task?.is_recurring || task?.source === 'recurring_tasks');
+}
+
+// Split tasks into reporting-month sections with a sub-class for past
+// non-report work. Display order:
+//   1. current month
+//   2. past months (oldest first) — REPORT tasks (urgent foreground)
+//   3. past months — NON-REPORT tasks (separate, muted section)
+//   4. future months (earliest first)
+//   5. undated (unknown)
+// When everything lands in one section the caller can suppress headers.
 function groupTasksByMonth(tasks) {
-  const buckets = new Map();
   const list = Array.isArray(tasks) ? tasks : [];
+
+  // Split past tasks into "urgent past" (reports) and "deferred past" (other)
+  // up front, so each visual section has a clear semantic.
+  const sections = new Map();  // sectionKey → { kind, month, tasks }
+  const pastNonReport = [];
   list.forEach(task => {
-    const key = getTaskMonth(task) || 'unknown';
-    if (!buckets.has(key)) buckets.set(key, []);
-    buckets.get(key).push(task);
+    const month = getTaskMonth(task) || 'unknown';
+    const isPast = month !== 'unknown' && month < CURRENT_MONTH_KEY;
+    if (isPast && !isReportingTask(task)) {
+      pastNonReport.push(task);
+      return;
+    }
+    const sectionKey = month;
+    if (!sections.has(sectionKey)) sections.set(sectionKey, []);
+    sections.get(sectionKey).push(task);
   });
-  const keys = [...buckets.keys()].sort((a, b) => {
+
+  const monthKeys = [...sections.keys()].sort((a, b) => {
     if (a === b) return 0;
     if (a === 'unknown') return 1;
     if (b === 'unknown') return -1;
@@ -1138,19 +1199,36 @@ function groupTasksByMonth(tasks) {
     if (b === CURRENT_MONTH_KEY) return 1;
     const aPast = a < CURRENT_MONTH_KEY;
     const bPast = b < CURRENT_MONTH_KEY;
-    if (aPast && !bPast) return -1;  // leftover (past) before future
+    if (aPast && !bPast) return -1;  // overdue reports before future
     if (!aPast && bPast) return 1;
-    if (aPast && bPast) return a.localeCompare(b);  // oldest leftover first
-    return a.localeCompare(b);                       // earliest future first
+    if (aPast && bPast) return a.localeCompare(b);
+    return a.localeCompare(b);
   });
-  return keys.map(month => ({
+
+  const out = monthKeys.map(month => ({
+    key: `month_${month}`,
     month,
     label: month === 'unknown' ? 'ללא תאריך / חודש' : formatMonthLabel(month),
-    tasks: buckets.get(month),
+    tasks: sections.get(month),
     isCurrent: month === CURRENT_MONTH_KEY,
     isLeftover: month !== 'unknown' && month < CURRENT_MONTH_KEY,
     isFuture: month !== 'unknown' && month > CURRENT_MONTH_KEY,
+    isDeferredPast: false,
   }));
+
+  if (pastNonReport.length > 0) {
+    out.push({
+      key: 'deferred_past',
+      month: 'deferred_past',
+      label: 'מעבר — נדחה מחודש קודם (לא דחוף)',
+      tasks: pastNonReport,
+      isCurrent: false,
+      isLeftover: false,
+      isFuture: false,
+      isDeferredPast: true,
+    });
+  }
+  return out;
 }
 
 function TaskList({ tasks, onStatusChange, onPaymentDateChange, onEdit, onNote, showDeadlineContext, showDate, showPaymentDate }) {
@@ -1164,54 +1242,63 @@ function TaskList({ tasks, onStatusChange, onPaymentDateChange, onEdit, onNote, 
   if (multiMonth) {
     return (
       <div className="space-y-3">
-        {monthSections.map(section => (
-          <div key={section.month}>
+        {monthSections.map(section => {
+          // Section colour palette:
+          //   current  → calm green   (foreground priority)
+          //   leftover → amber        (overdue reports — still urgent)
+          //   future   → soft blue    (preview)
+          //   deferred → slate/muted  (past + non-report = not urgent)
+          //   unknown  → neutral
+          const palette = section.isDeferredPast
+            ? { bg: '#F8FAFC', border: '#CBD5E1', text: '#64748B', tag: 'נדחה' }
+            : section.isCurrent
+              ? { bg: '#ECFDF5', border: '#A7F3D0', text: '#065F46', tag: 'החודש' }
+              : section.isLeftover
+                ? { bg: '#FEF3C7', border: '#FCD34D', text: '#92400E', tag: 'נשאר מהחודש הקודם' }
+                : section.isFuture
+                  ? { bg: '#EFF6FF', border: '#BFDBFE', text: '#1E40AF', tag: '' }
+                  : { bg: '#F1F5F9', border: '#E2E8F0', text: '#475569', tag: '' };
+          return (
             <div
-              className="flex items-center gap-2 px-2 py-1 rounded-md mb-1"
-              style={{
-                backgroundColor: section.isCurrent ? '#ECFDF5' : section.isLeftover ? '#FEF3C7' : section.isFuture ? '#EFF6FF' : '#F1F5F9',
-                border: `1px solid ${section.isCurrent ? '#A7F3D0' : section.isLeftover ? '#FCD34D' : section.isFuture ? '#BFDBFE' : '#E2E8F0'}`,
-              }}
+              key={section.key || section.month}
+              style={{ opacity: section.isDeferredPast ? 0.75 : 1 }}
             >
-              <span
-                className="text-[11px] font-bold"
-                style={{ color: section.isCurrent ? '#065F46' : section.isLeftover ? '#92400E' : section.isFuture ? '#1E40AF' : '#475569' }}
+              <div
+                className="flex items-center gap-2 px-2 py-1 rounded-md mb-1"
+                style={{ backgroundColor: palette.bg, border: `1px solid ${palette.border}` }}
               >
-                {section.label}
-              </span>
-              <span
-                className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
-                style={{
-                  backgroundColor: '#FFFFFF',
-                  color: section.isCurrent ? '#065F46' : section.isLeftover ? '#92400E' : section.isFuture ? '#1E40AF' : '#475569',
-                  border: '1px solid currentColor',
-                }}
-              >
-                {section.tasks.length}
-              </span>
-              {section.isLeftover && (
-                <span className="text-[10px] font-semibold text-amber-700">
-                  נשאר מהחודש הקודם
+                <span className="text-[11px] font-bold" style={{ color: palette.text }}>
+                  {section.label}
                 </span>
-              )}
-              {section.isCurrent && (
-                <span className="text-[10px] font-semibold text-emerald-700">
-                  החודש
+                <span
+                  className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    color: palette.text,
+                    border: '1px solid currentColor',
+                  }}
+                >
+                  {section.tasks.length}
                 </span>
-              )}
+                {palette.tag && (
+                  <span className="text-[10px] font-semibold" style={{ color: palette.text }}>
+                    {palette.tag}
+                  </span>
+                )}
+              </div>
+              <SingleMonthTaskList
+                tasks={section.tasks}
+                onStatusChange={onStatusChange}
+                onPaymentDateChange={onPaymentDateChange}
+                onEdit={onEdit}
+                onNote={onNote}
+                showDeadlineContext={showDeadlineContext}
+                showDate={showDate}
+                showPaymentDate={showPaymentDate}
+              />
             </div>
-            <SingleMonthTaskList
-              tasks={section.tasks}
-              onStatusChange={onStatusChange}
-              onPaymentDateChange={onPaymentDateChange}
-              onEdit={onEdit}
-              onNote={onNote}
-              showDeadlineContext={showDeadlineContext}
-              showDate={showDate}
-              showPaymentDate={showPaymentDate}
-            />
-          </div>
-        ))}
+          );
+        })}
       </div>
     );
   }
