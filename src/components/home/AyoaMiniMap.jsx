@@ -654,13 +654,21 @@ export default function AyoaMiniMap({
     );
   }, [drawerTasks, selectedGroup]);
 
-  // Group drawer tasks by service template so the drawer can render the
-  // same rich row UI as the dashboards (GroupedServiceTable). One section
-  // per service: e.g. a "מע״מ" drawer shows one table for vat tasks, and
-  // (if any) a separate table for vat_874. Tasks whose category doesn't
-  // resolve to a service are bucketed under a synthetic "other" service.
-  const drawerByService = useMemo(() => {
+  // Group drawer tasks TWO levels: first by service template, then within
+  // each service by reporting_month. The drawer renders one
+  // GroupedServiceTable per (service, month) pair with a clear header
+  // showing both — so the user can see at a glance "מס\"ב ספקים ·
+  // אפריל 2026 (5)" vs "מס\"ב ספקים · מרץ 2026 (3)" instead of one
+  // undifferentiated lump labelled by service alone.
+  // Display order: current reporting month first, then past months
+  // (oldest first → "stuck longest" at top of leftover), then future,
+  // then unknown. Inside each section, clients sorted alphabetically.
+  const drawerByServiceAndMonth = useMemo(() => {
     if (!selectedGroup) return [];
+    const today = new Date();
+    const currentRm = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+
+    // service-key → { service, byMonth: Map<rm, tasks[]> }
     const buckets = new Map();
     drawerTasks.forEach((task) => {
       const svc = getServiceForTask(task);
@@ -674,21 +682,52 @@ export default function AyoaMiniMap({
             steps: [],
             taskType: 'linear',
           },
-          tasks: [],
+          byMonth: new Map(),
         });
       }
-      buckets.get(key).tasks.push(task);
+      const rm = (task.reporting_month && /^\d{4}-\d{2}/.test(task.reporting_month))
+        ? task.reporting_month.slice(0, 7)
+        : 'unknown';
+      const monthMap = buckets.get(key).byMonth;
+      if (!monthMap.has(rm)) monthMap.set(rm, []);
+      monthMap.get(rm).push(task);
     });
-    return Array.from(buckets.values()).map(({ service, tasks: svcTasks }) => ({
-      service,
-      clientRows: svcTasks
-        .map((task) => ({
-          clientName: task.client_name || 'ללא לקוח',
-          task,
-          client: clientByName[task.client_name] || null,
-        }))
-        .sort((a, b) => a.clientName.localeCompare(b.clientName, 'he')),
-    }));
+
+    const sortedSections = [];
+    for (const { service, byMonth } of buckets.values()) {
+      const monthKeys = [...byMonth.keys()].sort((a, b) => {
+        if (a === b) return 0;
+        if (a === 'unknown') return 1;
+        if (b === 'unknown') return -1;
+        if (a === currentRm) return -1;
+        if (b === currentRm) return 1;
+        const aPast = a < currentRm;
+        const bPast = b < currentRm;
+        if (aPast && !bPast) return -1;            // overdue before future
+        if (!aPast && bPast) return 1;
+        if (aPast && bPast) return a.localeCompare(b);  // oldest leftover first
+        return a.localeCompare(b);                       // earliest future first
+      });
+      for (const month of monthKeys) {
+        const svcTasks = byMonth.get(month);
+        sortedSections.push({
+          service,
+          month,
+          monthLabel: month === 'unknown' ? 'ללא חודש דיווח' : formatHebrewMonth(month),
+          isCurrent: month === currentRm,
+          isLeftover: month !== 'unknown' && month < currentRm,
+          isFuture: month !== 'unknown' && month > currentRm,
+          clientRows: svcTasks
+            .map((task) => ({
+              clientName: task.client_name || 'ללא לקוח',
+              task,
+              client: clientByName[task.client_name] || null,
+            }))
+            .sort((a, b) => a.clientName.localeCompare(b.clientName, 'he')),
+        });
+      }
+    }
+    return sortedSections;
   }, [drawerTasks, selectedGroup, clientByName]);
 
   // Stage 5.9: unique client names for the drawer sub-title. Preserves
@@ -1048,31 +1087,69 @@ export default function AyoaMiniMap({
                 inline status select, notes, attachments. The outer wrapper
                 mirrors the dashboards' rounded border-card so the drawer
                 renders the table identically. */}
-            {drawerByService.map(({ service, clientRows }) => (
-              <div key={service.key} className="mb-4 border border-[#E0E0E0] rounded-xl overflow-hidden">
-                <GroupedServiceTable
-                  service={service}
-                  clientRows={clientRows}
-                  allTasks={tasks}
-                  onToggleStep={onToggleStep || (() => {})}
-                  onDateChange={onDateChange || (() => {})}
-                  onStatusChange={(task, newStatus) => handleRowStatusChange(task, newStatus)}
-                  onPaymentDateChange={onPaymentDateChange || (() => {})}
-                  onSubTaskChange={onSubTaskChange || (() => {})}
-                  onAttachmentUpdate={onAttachmentUpdate || (() => {})}
-                  getClientIds={() => []}
-                  onEdit={onEditTask || (() => {})}
-                  onDelete={null}
-                  onNote={onNote || (() => {})}
-                  bulkMode={false}
-                  selectedTaskIds={new Set()}
-                  onToggleSelect={() => {}}
-                />
-              </div>
-            ))}
+            {drawerByServiceAndMonth.map(({ service, month, monthLabel, isCurrent, isLeftover, isFuture, clientRows }) => {
+              // Per-section header: service name + reporting month, color-
+              // coded by recency. Lets the user instantly tell apart
+              // "מס\"ב ספקים · אפריל 2026 (5)" from "מס\"ב ספקים ·
+              // מרץ 2026 (3)" without parsing rows.
+              const palette = isCurrent
+                ? { bg: '#ECFDF5', border: '#A7F3D0', text: '#065F46', tag: 'החודש' }
+                : isLeftover
+                  ? { bg: '#FEF3C7', border: '#FCD34D', text: '#92400E', tag: 'נשאר מחודש קודם' }
+                  : isFuture
+                    ? { bg: '#EFF6FF', border: '#BFDBFE', text: '#1E40AF', tag: 'עתידי' }
+                    : { bg: '#F1F5F9', border: '#E2E8F0', text: '#475569', tag: '' };
+              return (
+                <div key={`${service.key}__${month}`} className="mb-5">
+                  <div
+                    className="flex items-center gap-2 px-3 py-2 rounded-t-xl border border-b-0"
+                    style={{ backgroundColor: palette.bg, borderColor: palette.border }}
+                  >
+                    <span className="text-[13px] font-extrabold" style={{ color: palette.text }}>
+                      {service.label}
+                    </span>
+                    <span className="text-[12px]" style={{ color: palette.text, opacity: 0.7 }}>·</span>
+                    <span className="text-[13px] font-semibold" style={{ color: palette.text }}>
+                      {monthLabel}
+                    </span>
+                    <span
+                      className="text-[11px] font-bold px-1.5 py-0.5 rounded-full"
+                      style={{ backgroundColor: '#FFFFFF', color: palette.text, border: `1px solid ${palette.border}` }}
+                    >
+                      {clientRows.length}
+                    </span>
+                    {palette.tag && (
+                      <span className="text-[11px] font-semibold mr-auto" style={{ color: palette.text }}>
+                        {palette.tag}
+                      </span>
+                    )}
+                  </div>
+                  <div className="border border-t-0 border-[#E0E0E0] rounded-b-xl overflow-hidden">
+                    <GroupedServiceTable
+                      service={service}
+                      clientRows={clientRows}
+                      allTasks={tasks}
+                      onToggleStep={onToggleStep || (() => {})}
+                      onDateChange={onDateChange || (() => {})}
+                      onStatusChange={(task, newStatus) => handleRowStatusChange(task, newStatus)}
+                      onPaymentDateChange={onPaymentDateChange || (() => {})}
+                      onSubTaskChange={onSubTaskChange || (() => {})}
+                      onAttachmentUpdate={onAttachmentUpdate || (() => {})}
+                      getClientIds={() => []}
+                      onEdit={onEditTask || (() => {})}
+                      onDelete={null}
+                      onNote={onNote || (() => {})}
+                      bulkMode={false}
+                      selectedTaskIds={new Set()}
+                      onToggleSelect={() => {}}
+                    />
+                  </div>
+                </div>
+              );
+            })}
             {/* Legacy status-grouped fallback view — kept only when nothing
                 resolves to a service template (raw home tasks etc.). */}
-            {drawerByService.length === 0 && Object.entries(drawerTasksByStatus).map(([status, statusTasks]) => {
+            {drawerByServiceAndMonth.length === 0 && Object.entries(drawerTasksByStatus).map(([status, statusTasks]) => {
               const statusCfg = TASK_STATUS_CONFIG[status];
               return (
                 <div key={status} className="mb-3">
