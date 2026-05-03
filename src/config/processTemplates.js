@@ -983,7 +983,24 @@ export function areAllStepsDone(task) {
   if (!templateSteps.length) return false;
 
   const steps = task.process_steps || {};
-  return templateSteps.every(s => steps[s.key]?.done);
+
+  // `autoSufficient` steps (e.g. הכנסות 0 / הוצאות 0) are SKIP FLAGS, not
+  // required work. There are two ways an income/expense collection task
+  // can finish:
+  //   (1) All regular steps are done (קבלת חומרים → הזנה → מספיק → בדיקה).
+  //       The skip flag stays off — that's fine, the work was done.
+  //   (2) The skip flag is on (לקוח דיווח 0 הכנסות) — there's nothing to
+  //       collect, so the rest of the steps don't matter.
+  // Without this carve-out, a task where the user finished all the real
+  // steps still reads as incomplete just because the "0" flag is unchecked,
+  // and a task where the "0" flag IS checked still reads as incomplete
+  // because the never-done input/check steps drag it down.
+  const skipFlagDone = templateSteps.some(s => s.autoSufficient && steps[s.key]?.done);
+  if (skipFlagDone) return true;
+
+  return templateSteps
+    .filter(s => !s.autoSufficient)
+    .every(s => steps[s.key]?.done);
 }
 
 // ============================================================

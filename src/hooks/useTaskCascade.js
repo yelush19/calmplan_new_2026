@@ -137,15 +137,28 @@ export default function useTaskCascade(tasks, setTasks, clients = []) {
       }
 
       if (tasksToCreate.length > 0) {
+        // Cascade-created child titles ("משלוח תלושים - אורי סאן בע"מ")
+        // don't match injection-created titles ("אורי סאן בע"מ - משלוח
+        // תלושים עבור חודש אפריל 2026"), so a title-only dedup let
+        // duplicates slip through whenever the user injected a month
+        // AND a Phase A payroll completed for the same client+month.
+        // Treat (client + category + reporting_month) as the canonical
+        // identity for these scheduled tasks — there's only ever one
+        // legitimate masav/תלושים/ניכויים/ב"ל task per client per month.
+        const dupKey = (t) => `${t.client_name || t.client_id || ''}|${t.category || ''}|${t.reporting_month || ''}`;
+        const existingKeys = new Set(tasks.map(dupKey));
         const existingTitles = new Set(tasks.map(t => t.title));
         for (const newTask of tasksToCreate) {
           if (existingTitles.has(newTask.title)) continue;
+          if (newTask.reporting_month && existingKeys.has(dupKey(newTask))) continue;
           const created = await Task.create(newTask);
           if (created) {
             setTasks(prev => [...prev, created]);
+            existingKeys.add(dupKey(created));
+            existingTitles.add(created.title);
             // Sync design without circular dependency
-            window.dispatchEvent(new CustomEvent('calmplan:design-changed', { 
-              detail: { nodeId: created.id, color: created.color, shape: created.shape } 
+            window.dispatchEvent(new CustomEvent('calmplan:design-changed', {
+              detail: { nodeId: created.id, color: created.color, shape: created.shape }
             }));
           }
         }
@@ -197,11 +210,21 @@ export default function useTaskCascade(tasks, setTasks, clients = []) {
     try {
       await Task.update(taskId, updates);
       if (cascade.tasksToCreate?.length > 0) {
+        // Same dedup logic as the Phase A cascade above: title alone is
+        // not enough because cascade and injection produce different
+        // formats. Use (client + category + reporting_month).
+        const dupKey = (t) => `${t.client_name || t.client_id || ''}|${t.category || ''}|${t.reporting_month || ''}`;
+        const existingKeys = new Set(tasks.map(dupKey));
         const existingTitles = new Set(tasks.map(t => t.title));
         for (const newTask of cascade.tasksToCreate) {
           if (existingTitles.has(newTask.title)) continue;
+          if (newTask.reporting_month && existingKeys.has(dupKey(newTask))) continue;
           const created = await Task.create(newTask);
-          if (created) setTasks(prev => [...prev, created]);
+          if (created) {
+            setTasks(prev => [...prev, created]);
+            existingKeys.add(dupKey(created));
+            existingTitles.add(created.title);
+          }
         }
       }
       notifyChange('tasks');
