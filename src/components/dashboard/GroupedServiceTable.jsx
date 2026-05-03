@@ -332,7 +332,7 @@ export default function GroupedServiceTable({
                 );
               })}
               <th className="text-center py-2.5 px-3 font-bold text-gray-800 text-[13px] bg-gray-50 min-w-[80px]">
-                סטטוס
+                מהות משימה
               </th>
               <th className="text-right py-2.5 px-3 font-bold text-gray-800 text-[13px] bg-gray-50 min-w-[120px]">
                 הערות
