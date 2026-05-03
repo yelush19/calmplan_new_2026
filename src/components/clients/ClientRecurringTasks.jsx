@@ -1027,11 +1027,37 @@ export default function ClientRecurringTasks({ onGenerateComplete, branchFilter 
           const taskTitle = `${client.name} - ${description}`;
           const dueDateStr = format(date, 'yyyy-MM-dd');
 
-          // Duplicate check (skip in force-inject mode)
-          const alreadyExists = !forceInject && existingTasks.some(t =>
-            t.title === taskTitle ||
-            (t.client_name === client.name && t.category === categoryKey && t.due_date === dueDateStr)
-          );
+          // Duplicate check (skip in force-inject mode).
+          //
+          // Title match alone is the strongest signal — it embeds the
+          // client, the category, the reporting month, and (for masav
+          // suppliers) the cycle number, so two tasks with the same title
+          // are unambiguously the same logical task.
+          //
+          // The fallback (client + category + due_date) is meant to catch
+          // hand-rolled tasks whose titles don't follow the standard
+          // template. It used to be the bug source for masav-suppliers
+          // cycle-15: a NEW task for April (cycle 15, due 2026-04-15)
+          // collides on due_date with the OLD March task (single mode,
+          // due 2026-04-15 from the calendar) — same client, same
+          // category, same due_date, even though the reporting months are
+          // different. Including reporting_month in the secondary check
+          // disambiguates them so cycle-15 of April actually gets created.
+          // reportMonth always belongs to `year` (December is still
+          // year=Y even when its due_date lands in January Y+1). Match
+          // the format produced by createTasks's reporting_month assignment.
+          const newReportingMonth = `${year}-${String(reportMonth).padStart(2, '0')}`;
+          const alreadyExists = !forceInject && existingTasks.some(t => {
+            if (t.title === taskTitle) return true;
+            if (t.client_name !== client.name) return false;
+            if (t.category !== categoryKey) return false;
+            if (t.due_date !== dueDateStr) return false;
+            // If the existing task has an explicit reporting_month and it
+            // differs from the new task's, this is NOT a duplicate.
+            const existingRm = (t.reporting_month || '').slice(0, 7);
+            if (existingRm && existingRm !== newReportingMonth) return false;
+            return true;
+          });
           if (alreadyExists) {
             coverage[categoryKey].skippedDup++;
             continue;

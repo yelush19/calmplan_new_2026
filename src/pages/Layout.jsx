@@ -129,8 +129,12 @@ const getSidebarSections = () => ({
         // ── הנה"ח ──
         // bookkeeping מוזרק ל-TaxReportsDashboard רק כשה-?service= פעיל
         // (לא בברירת המחדל — כדי לא לזהם את ה-default render של דיווחי המס).
-        { name: "הנהלת חשבונות", href: createPageUrl("TaxReportsDashboard") + "?service=bookkeeping", icon: BookOpen },
-        { name: "התאמות",        href: createPageUrl("Reconciliations"),                              icon: BookCheck },
+        { name: "הנהלת חשבונות", href: createPageUrl("TaxReportsDashboard") + "?service=bookkeeping",      icon: BookOpen },
+        // מס"ב ספקים — דשבורד קיים תחת tax dashboard (processTemplates.js: dashboard='tax').
+        // הוספתי כניסה ישירה כי ב-injection יוצרים משימות לסייקלים 15+30
+        // והקטגוריה לא הופיעה בתפריט הצידי כלל.
+        { name: "מס\"ב ספקים",   href: createPageUrl("TaxReportsDashboard") + "?service=masav_suppliers", icon: BookOpen },
+        { name: "התאמות",        href: createPageUrl("Reconciliations"),                                  icon: BookCheck },
         // ── אדמין ──
         { name: "משימות אדמין",  href: createPageUrl("AdminTasksDashboard") + "?service=admin",       icon: Settings },
       ]},
