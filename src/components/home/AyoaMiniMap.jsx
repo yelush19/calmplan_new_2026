@@ -187,16 +187,16 @@ const STATUS_ORDER = [
 // lands at the top (angle = -π/2) and subsequent groups walk clockwise.
 // Geometry is fixed (viewBox) so the SVG scales cleanly on any
 // screen width without the circles colliding or the labels clipping.
-// ADHD-accessibility tightening: reduced ring radius + viewBox so the map
-// occupies roughly half the vertical real-estate it used to, leaving room
-// for the focus-tab grid below it without scrolling.
-const VIEW_WIDTH = 480;
-const VIEW_HEIGHT = 270;
+// Home is now map-only (no focus-tab grid below) so the map can take
+// more vertical space and breathe; the viewBox is widened a bit and the
+// ring radius pushed out so labels don't crowd the centre hub.
+const VIEW_WIDTH = 560;
+const VIEW_HEIGHT = 380;
 const CENTER_X = VIEW_WIDTH / 2;
 const CENTER_Y = VIEW_HEIGHT / 2;
-const RING_RADIUS = 96;  // distance from centre to each group circle
-const HUB_RADIUS = 28;   // size of the central hub
-const LABEL_OFFSET = 8;  // gap between circle edge and its label box
+const RING_RADIUS = 132; // distance from centre to each group circle
+const HUB_RADIUS = 36;   // size of the central hub
+const LABEL_OFFSET = 10; // gap between circle edge and its label box
 
 function computeRadialPosition(i, n) {
   // For a single group, park it directly above the hub so the layout
@@ -727,16 +727,16 @@ export default function AyoaMiniMap({
           {groups.length} תחומים · לחצי על עיגול
         </span>
       </div>
-      {/* ADHD-accessibility: cap the SVG width so it doesn't stretch and
-          eat the entire viewport on wide screens — keeps the map in scale
-          with the rest of the page and leaves room for the focus tabs.
-          height moves to CSS (not the SVG attribute, which only accepts
-          numeric/length values) to avoid console warnings. */}
+      {/* Home is map-only now, so the map can occupy more horizontal space.
+          maxWidth bumped up to 760px so on wide screens the circles read
+          as the page focal point, not a tiny widget. height stays in CSS
+          (not the SVG attribute, which only accepts numeric/length values)
+          to avoid console warnings. */}
       <svg
         width="100%"
         viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
         preserveAspectRatio="xMidYMid meet"
-        style={{ display: 'block', maxWidth: '480px', margin: '0 auto', height: 'auto' }}
+        style={{ display: 'block', maxWidth: '760px', margin: '0 auto', height: 'auto' }}
       >
         {/* Branches first — rendered under the circles so the circle
             strokes always sit on top of the line ends. */}
