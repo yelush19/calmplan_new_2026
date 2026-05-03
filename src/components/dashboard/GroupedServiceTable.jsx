@@ -469,12 +469,41 @@ const ClientRow = React.forwardRef(function ClientRow({ clientName, task, client
   const blockedByReasons = useMemo(() => getBlockedByReasons(task, allTasks), [task, allTasks]);
 
   // Energy tier computation
-  const isVat = service.key === 'vat' || service.key === 'tax_advances';
+  const isVat = service.key === 'vat' || service.key === 'tax_advances' || service.key === 'vat_874';
   const isPayroll = service.key === 'payroll';
   const vatTier = isVat ? getVatEnergyTier(task) : null;
   const payrollTier = isPayroll && client ? getPayrollTier(client) : null;
   const isQuickWin = vatTier?.key === 'quick_win' || payrollTier?.key === 'nano';
   const isClimb = vatTier?.key === 'climb';
+
+  // VAT readiness chips: surface whether the prep tasks (קליטת הכנסות /
+  // קליטת הוצאות) for the same client+reporting_month are done. Lets the
+  // user spot at a glance what's still blocking the VAT report without
+  // hunting through the Tax dashboard. Only computed for VAT tasks.
+  const vatPrepReadiness = useMemo(() => {
+    if (!isVat) return null;
+    const rm = task.reporting_month || '';
+    if (!rm) return null;
+    const pickStatus = (categoryName) => {
+      const sibling = (allTasks || []).find(t =>
+        t.client_name === task.client_name &&
+        t.category === categoryName &&
+        (t.reporting_month || '') === rm
+      );
+      if (!sibling) return 'missing';
+      const steps = sibling.process_steps || {};
+      // Reuses the same skip-flag/all-steps logic as the cascade so the
+      // chip flips green at the same moment the task auto-completes.
+      const sufficientDone = !!steps.sufficient_for_reporting?.done;
+      const skipFlag = !!(steps.zero_income?.done || steps.zero_expenses?.done);
+      if (sibling.status === 'production_completed' || sufficientDone || skipFlag) return 'done';
+      return 'pending';
+    };
+    return {
+      income:   pickStatus('קליטת הכנסות'),
+      expense:  pickStatus('קליטת הוצאות'),
+    };
+  }, [isVat, task.client_name, task.reporting_month, allTasks]);
 
   const statusOptions = ['waiting_for_materials', 'not_started', 'sent_for_review', 'review_after_corrections', 'ready_to_broadcast', 'reported_pending_payment', 'needs_corrections', 'production_completed'];
 
@@ -547,6 +576,35 @@ const ClientRow = React.forwardRef(function ClientRow({ clientName, task, client
                 )}
                 {isClimb && task.status !== 'production_completed' && (
                   <Badge className="text-[11px] px-1 py-0 bg-purple-100 text-purple-600 border-purple-200 shrink-0">45+</Badge>
+                )}
+                {/* VAT prep readiness — quick visual on each VAT row of
+                    whether the prep tasks (קליטת הכנסות / קליטת הוצאות)
+                    for the SAME client+reporting_month are done. Hover
+                    each chip for the full state. */}
+                {vatPrepReadiness && task.status !== 'production_completed' && (
+                  <>
+                    {(() => {
+                      const STATE_STYLE = {
+                        done:    { bg: 'bg-emerald-50',  text: 'text-emerald-700', border: 'border-emerald-200', icon: '✓', tip: 'הושלם' },
+                        pending: { bg: 'bg-amber-50',   text: 'text-amber-700',   border: 'border-amber-200',   icon: '◯', tip: 'בעבודה' },
+                        missing: { bg: 'bg-red-50',     text: 'text-red-700',     border: 'border-red-200',     icon: '✕', tip: 'לא קיימת — צריך להזריק' },
+                      };
+                      const inc = STATE_STYLE[vatPrepReadiness.income];
+                      const exp = STATE_STYLE[vatPrepReadiness.expense];
+                      return (
+                        <>
+                          <Badge className={`text-[10px] px-1 py-0 shrink-0 border ${inc.bg} ${inc.text} ${inc.border}`}
+                            title={`קליטת הכנסות — ${inc.tip}`}>
+                            הכנסות {inc.icon}
+                          </Badge>
+                          <Badge className={`text-[10px] px-1 py-0 shrink-0 border ${exp.bg} ${exp.text} ${exp.border}`}
+                            title={`קליטת הוצאות — ${exp.tip}`}>
+                            הוצאות {exp.icon}
+                          </Badge>
+                        </>
+                      );
+                    })()}
+                  </>
                 )}
               </div>
               {taxIds.length > 0 && (
