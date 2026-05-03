@@ -1081,6 +1081,30 @@ export default function ClientRecurringTasks({ onGenerateComplete, branchFilter 
           // Cognitive load: max of service base and client tier
           const scaledCognitiveLoad = Math.max(sw.cognitiveLoad, clientTier);
 
+          // Pre-fill process_steps when the client has direct access to the
+          // bookkeeping software for income/expense collection. Marking
+          // "קבלת חומרים" as already done at injection time saves the user
+          // from clicking it on every client every month — the materials
+          // are already on hand because she logs in to their system.
+          // Applies to BOTH קליטת הכנסות AND קליטת הוצאות (same access).
+          let preFilledSteps;
+          const hasDirectIncomeAccess = Array.isArray(client.income_software_access)
+            && client.income_software_access.length > 0;
+          if (hasDirectIncomeAccess && (categoryKey === 'קליטת הכנסות' || categoryKey === 'קליטת הוצאות')) {
+            const todayIso = new Date().toISOString().split('T')[0];
+            const softwareNames = client.income_software_access
+              .map(x => typeof x === 'string' ? x : x?.name)
+              .filter(Boolean)
+              .join(', ');
+            preFilledSteps = {
+              receive_data: {
+                done: true,
+                date: todayIso,
+                notes: `אוטומטי בהזרקה — גישה ישירה: ${softwareNames}`,
+              },
+            };
+          }
+
           const task = {
             _previewId: taskId, title: taskTitle,
             description: `${description}\nלקוח: ${client.name}${clientIs874 ? '\nסוג: מע"מ מפורט (874)' : ''}`,
@@ -1092,6 +1116,7 @@ export default function ClientRecurringTasks({ onGenerateComplete, branchFilter 
             estimated_duration: scaledDuration,
             cognitive_load: scaledCognitiveLoad,
             complexity_tier: clientTier,
+            ...(preFilledSteps ? { process_steps: preFilledSteps } : {}),
             _categoryOrder: categoryDef.order, _categoryLabel: categoryDef.label,
             _categoryColor: categoryDef.color, _categoryAccent: categoryDef.accent,
             _categoryBgSoft: categoryDef.bgSoft, _categoryDot: categoryDef.dot,
