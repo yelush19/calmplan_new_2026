@@ -577,6 +577,10 @@ export default function AyoaMiniMap({
   onDateChange,
   onSubTaskChange,
   onAttachmentUpdate,
+  // When the map is the page focal point (e.g. /MindMap) the caller can
+  // pass a larger maxWidth (or null for "fill"). Default keeps Home tidy.
+  maxWidth = '1000px',
+  title = 'מפה לפי תחומי שירות',
 }) {
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [expandedSteps, setExpandedSteps] = useState({});
@@ -816,7 +820,7 @@ export default function AyoaMiniMap({
     >
       <div className="flex items-center justify-between mb-1">
         <h3 className="text-xs font-semibold" style={{ color: '#1A2332' }}>
-          מפה לפי תחומי שירות
+          {title}
         </h3>
         <span className="text-[11px]" style={{ color: '#9AA5B4' }}>
           {groups.length} תחומים · לחצי על עיגול
@@ -831,7 +835,12 @@ export default function AyoaMiniMap({
         width="100%"
         viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
         preserveAspectRatio="xMidYMid meet"
-        style={{ display: 'block', maxWidth: '1000px', margin: '0 auto', height: 'auto' }}
+        style={{
+          display: 'block',
+          ...(maxWidth ? { maxWidth } : {}),
+          margin: '0 auto',
+          height: 'auto',
+        }}
       >
         {/* Branches first — rendered under the circles so the circle
             strokes always sit on top of the line ends. */}
