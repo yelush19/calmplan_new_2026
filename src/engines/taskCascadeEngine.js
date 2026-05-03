@@ -1178,8 +1178,21 @@ export function evaluateAuthorityStatus(task, updatedSteps) {
     return { status: 'reported_pending_payment' };
   }
 
-  // Report prep + file prep done (ready to file) → מוכן לשידור
-  if (reportPrep && filePrep) {
+  // הפקת דו"ח done → מוכן לשידור.
+  // Older logic required BOTH report_prep AND file_prep, but most
+  // authority services (vat, tax_advances, deductions, social_security)
+  // don't have a file_prep step at all — only report_prep, submission,
+  // payment, and the two recording steps. Without this fallback those
+  // services never tipped to "מוכן לשידור" until the user manually
+  // toggled status. Now the rule is:
+  //   • If the template HAS a file_prep step → both must be done (legacy).
+  //   • If it doesn't → report_prep alone is enough.
+  const hasFilePrep = stepKeys.includes('file_prep');
+  if (hasFilePrep) {
+    if (reportPrep && filePrep) {
+      return { status: 'ready_to_broadcast' };
+    }
+  } else if (reportPrep) {
     return { status: 'ready_to_broadcast' };
   }
 

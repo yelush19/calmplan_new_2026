@@ -117,6 +117,19 @@ const LABEL_MAP = {
 // so the bucket still appears in counts but doesn't compete for attention.
 const LOW_PRIORITY_DOMAINS = new Set(['payroll_recording']);
 
+// Hebrew month names for the per-month chip in the drawer header.
+const HEBREW_MONTH_NAMES = [
+  'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
+  'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר',
+];
+function formatHebrewMonth(yyyymm) {
+  if (!yyyymm || yyyymm === 'unknown') return yyyymm;
+  const [y, mm] = String(yyyymm).split('-');
+  const idx = parseInt(mm, 10) - 1;
+  if (idx < 0 || idx > 11) return yyyymm;
+  return `${HEBREW_MONTH_NAMES[idx]} ${y}`;
+}
+
 // Map a dashboard key (as returned by getServiceForTask(task).dashboard)
 // to the corresponding unknown_* sub-bucket.
 const DASHBOARD_TO_UNKNOWN_KEY = {
@@ -157,6 +170,25 @@ function groupByServiceDomain(tasks) {
   const groups = new Map();
   const unknownKeys = new Set();
   (tasks || []).forEach((task) => {
+    // ממתין לרישום בהנה"ש (awaiting_recording) is the post-payment phase
+    // for authority tasks — by the user's framing, it's the same kind of
+    // "follow-up recording" work as קליטה להנה"ח and belongs in the same
+    // low-priority circle on the home map (so the act of recording into
+    // bookkeeping has a single visual home, regardless of whether the
+    // record is a payroll line or a VAT/ניכויים confirmation).
+    if (task.status === 'awaiting_recording' || task.status === 'reported_waiting_for_payment_pending_record') {
+      const normalized = 'payroll_recording';
+      if (!groups.has(normalized)) {
+        groups.set(normalized, {
+          normalized_key: normalized,
+          label: LABEL_MAP[normalized] || 'רישום פקודות',
+          tasks: [],
+        });
+      }
+      groups.get(normalized).tasks.push(task);
+      return;
+    }
+
     const raw = task.category || task.service_key || task.service_group || '';
     let normalized = normalizeServiceKey(raw);
     if (normalized === 'unknown') {
@@ -672,6 +704,34 @@ export default function AyoaMiniMap({
     return out;
   }, [drawerTasks, selectedGroup]);
 
+  // Reporting months represented in the drawer's tasks, with a count per
+  // month. Shown in the header so the user immediately knows whether
+  // she's looking at one month, two months mixed (typical leftover +
+  // current-month case), or "all months". Sorted: current first, then
+  // descending by date (newest leftover before oldest).
+  const drawerMonthsBreakdown = useMemo(() => {
+    if (!selectedGroup) return [];
+    const counts = new Map();
+    drawerTasks.forEach((t) => {
+      const m = (t.reporting_month && /^\d{4}-\d{2}/.test(t.reporting_month))
+        ? t.reporting_month.slice(0, 7)
+        : 'unknown';
+      counts.set(m, (counts.get(m) || 0) + 1);
+    });
+    const today = new Date();
+    const currentRm = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+    return [...counts.entries()]
+      .sort(([a], [b]) => {
+        if (a === b) return 0;
+        if (a === 'unknown') return 1;
+        if (b === 'unknown') return -1;
+        if (a === currentRm) return -1;
+        if (b === currentRm) return 1;
+        return b.localeCompare(a);
+      })
+      .map(([month, count]) => ({ month, count, isCurrent: month === currentRm }));
+  }, [drawerTasks, selectedGroup]);
+
   if (groups.length === 0) return null;
 
   const handleClick = (group) => {
@@ -925,8 +985,36 @@ export default function AyoaMiniMap({
             >
               {selectedGroup?.label || ''} · {selectedGroup?.tasks.length || 0} משימות
             </DrawerTitle>
+            {/* Per-month breakdown chip row — makes it obvious when a
+                drawer is showing multiple months mixed (e.g. April current
+                + March leftover). Without this the user couldn't tell
+                which month each section belongs to. */}
+            {drawerMonthsBreakdown.length > 0 && (
+              <div className="flex items-center justify-center gap-1.5 flex-wrap mt-1">
+                {drawerMonthsBreakdown.map(({ month, count, isCurrent }) => (
+                  <span
+                    key={month}
+                    className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                    style={{
+                      backgroundColor: month === 'unknown'
+                        ? '#F1F5F9'
+                        : isCurrent ? '#ECFDF5' : '#FEF3C7',
+                      color: month === 'unknown'
+                        ? '#475569'
+                        : isCurrent ? '#065F46' : '#92400E',
+                      border: `1px solid ${month === 'unknown' ? '#E2E8F0' : isCurrent ? '#A7F3D0' : '#FCD34D'}`,
+                    }}
+                  >
+                    {month === 'unknown'
+                      ? `ללא חודש (${count})`
+                      : `${formatHebrewMonth(month)} · ${count}`}
+                    {isCurrent ? ' · החודש' : ''}
+                  </span>
+                ))}
+              </div>
+            )}
             {drawerClientNames.length > 0 && (
-              <div className="text-xs text-slate-400 text-center mt-0.5">
+              <div className="text-xs text-slate-400 text-center mt-1">
                 {drawerClientNames.slice(0, 5).join(' · ')}
                 {drawerClientNames.length > 5 && ` +${drawerClientNames.length - 5}`}
               </div>

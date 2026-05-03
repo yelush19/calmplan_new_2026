@@ -245,16 +245,18 @@ export default function HomePage() {
       const clientFor = (task) => clientByName.get(task.client_name) || null;
 
       // Active tasks for HOME visualizations (circles, today/upcoming/overdue
-      // sections) exclude both fully-completed tasks AND tasks that finished
-      // their primary workflow (דיווח+תשלום) and are only awaiting bookkeeping
-      // recording — those are surfaced in their own dedicated section so they
-      // don't visually compete with tasks that still need real work.
-      // Uses getEffectiveStatus so legacy tasks whose persisted status is
-      // stale (e.g. submission+payment ticked but task.status still
-      // "not_started") are still classified correctly.
+      // sections). Excludes only fully-completed tasks. awaiting_recording
+      // tasks USED to be excluded too (so they wouldn't compete with real
+      // work for attention), but the user wants them surfaced on the map
+      // inside the low-priority "רישום פקודות" circle alongside קליטה
+      // להנה"ח. AyoaMiniMap.groupByServiceDomain routes them there now;
+      // Home just has to make sure they reach it. Uses getEffectiveStatus
+      // so legacy tasks whose persisted status is stale (e.g. submission+
+      // payment ticked but task.status still "not_started") are still
+      // classified correctly.
       const activeTasks = allTasks.filter(t => {
         const s = getEffectiveStatus(t, clientFor(t));
-        return s !== 'production_completed' && s !== 'awaiting_recording';
+        return s !== 'production_completed';
       });
       const awaitingRecording = allTasks.filter(t => getEffectiveStatus(t, clientFor(t)) === 'awaiting_recording');
 
